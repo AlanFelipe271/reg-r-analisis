@@ -1,0 +1,136 @@
+---
+title: "Codigo"
+author: "Alan de Jesús Felipe Cruz"
+date: "2025-03-12"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+```{r}
+# Cargamos los datos
+library(readr)
+datos <- read_csv("contaminacion.csv")
+tail(datos, 4)
+```
+
+### a) Elección de variables X's y Y
+```{r}
+y <- datos$SO2
+x1 <- datos$temp
+x2 <- datos$manu
+x3 <- datos$popul
+x4 <- datos$wind
+x5 <- datos$precip
+x6 <- datos$predays
+ 
+```
+
+### b) Gráficas de los datos
+```{r}
+par(mfrow = c(2, 3), cex=0.7)
+plot(x1, y, xlab = "Temperatura", ylab = "SO2", col="blue")
+plot(x2, y, xlab = "Manufactura", ylab = "SO2", col="cyan3")
+plot(x3, y, xlab = "Población", ylab = "SO2", col="red")
+plot(x4, y, xlab = "Viento", ylab = "SO2", col="deeppink" )
+plot(x5, y, xlab = "Precipitación", ylab = "SO2", col="purple")
+plot(x6, y, xlab = "Días de Precipitación", ylab = "SO2", col="darkgreen")
+
+```
+
+
+
+### c) Modelo para los datos
+```{r}
+modelo.1 <- lm(y ~ x1+x2+x3+x4+x5+x6)
+summary(modelo.1)
+# Estimación de parámetros
+cat("Los betas son: \n")
+cat("Beta_0: ", coef(modelo.1)[1],"\n")
+cat("Beta_1: ", coef(modelo.1)[2],"\n")
+cat("Beta_2: ", coef(modelo.1)[3],"\n")
+cat("Beta_3: ", coef(modelo.1)[4],"\n")
+cat("Beta_4: ", coef(modelo.1)[5],"\n")
+cat("Beta_5: ", coef(modelo.1)[6],"\n")
+cat("Beta_6: ", coef(modelo.1)[7],"\n")
+```
+### d) analisis de varianza del modelo
+### Varianza explicada por el modelo
+```{r}
+# Variabilidad explicada por el modelo
+anov <- anova(modelo.1)
+sc<- as.data.frame(anov$`Sum Sq`)
+scregr <- sc[1,]+sc[2,]+sc[3,]+sc[4,]+sc[5,]+sc[6,]
+Scerror <- sc[7,]
+Sctotal <- scregr+Scerror
+varexpl <- (scregr/Sctotal)*100
+cat("La variabilidad explicada por el modelo es:", varexpl,"%\n")
+anov
+```
+
+### Verifique si la variable explicativa influye de forma conjunta y lineal sobre Y
+Para esto simplemente obtenemos el p-value del modelo con lm
+```{r}
+summary(modelo.1)
+```
+El p-value es menor que $\alpha = 0.05$ por lo tanto, el modelo es significativo
+en su conjunto.
+
+### e) Significancia estadistica de los betas
+```{r}
+coeficientes <- c("Intercepto", "x1", "x2", "x3", "x4", "x5", "x6")
+for (i in 1:length(coeficientes)) {
+  if((summary(modelo.1)$coefficients[,4][i] < 0.05) == TRUE){
+    cat("El coeficiente de",coeficientes[i]," es significativo en el modelo.\n")
+  }
+}
+```
+
+### Intervalos de confianza para los beta's
+```{r}
+print("Los intervalos de confianza son:\n")
+confint(modelo.1)
+```
+
+### g) Preducción de nuevos datos
+Para esto eliminamos las variables que no son significativas y creamos un nuevo modelo.
+```{r}
+# Predicción de un nuevo dato
+newdato <- data.frame(x1=0,x2=500,x3=0,x4=0,x5=0,x6=0)
+predict(modelo.1, newdato)
+```
+### h) Supuestos para el modelo
+```{r}
+# Multicolinealidad
+datos.m.n <- data.frame(y,x1,x2,x3,x4,x5,x6)
+# Matriz de correlación
+cor(datos.m.n)
+```
+No existen problemas de multicolinealidad.
+```{r}
+# Prueba gráfica para la normalidad de residuos
+residuos <- residuals(modelo.1)
+qqnorm(residuos, main = "Gráfica de normalidad de los residuos.")
+qqline(residuos, col = "red")
+```
+
+```{r}
+# Prueba análitica
+shapiro.test(residuos)
+```
+La prueba indica que no hay normalidad en los residuos, y en el gráfico igual se puede ver.
+
+
+### Homocedasticidad
+```{r}
+library(lmtest)
+bptest(modelo.1)
+```
+
+Hay homocedasticidad de varianzas.
+
+### i) Concluya con base en el fenómeno físico y el análisis estadístico.
